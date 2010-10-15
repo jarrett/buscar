@@ -15,7 +15,7 @@ module Buscar
 		end
 		
 		def filter_param
-			@params[:filter] || (respond_to?(:default_filter_option) ? default_filter_option : 'none')
+			@params[:filter] || (respond_to?(:default_filter_option, true) ? default_filter_option : 'none')
 		end
 		
 		def filter_param_options
@@ -29,11 +29,19 @@ module Buscar
 		end
 		
 		def generate!
-			unless respond_to?(:finder)
+			unless respond_to?(:finder, true)
 				raise 'Subclasses of Index must define #finder, which must return something that responds to #find. For example, #finder may return an ActiveRecord::Base subclass.'
 			end
-			include_clause = respond_to?(:include) ? include : nil
-			@records = finder.find(:all, :conditions => conditions, :include => include_clause, :order => order)
+			
+			raise "Buscar::Index#conditions is deprecated. Name your method where_clause instead." if respond_to?(:conditions, true)
+			raise "Buscar::Index#order is deprecated. Name your method order_clause instead." if respond_to?(:order, true)
+			raise "Buscar::Index#include_clause is deprecated. Name your method includes_clause instead." if respond_to?(:include, true)
+			
+			 # Take advantage of the lazy loading introduced in ActiveRecord 3
+			@records = finder.scoped # Get the bare relation object in case none of the modifiers are used
+			%w(where having select group order limit offset joins includes lock readonly from).each do |meth|
+				@records = @records.send(meth, send("#{meth}_clause".to_sym)) if respond_to?("#{meth}_clause".to_sym, true)
+			end
 			if select_proc
 				@records = @records.select(&select_proc)
 			end
@@ -83,7 +91,7 @@ module Buscar
 		end
 		
 		def sort_param
-			@params[:sort] || (respond_to?(:default_sort_option) ? default_sort_option : 'none')
+			@params[:sort] || (respond_to?(:default_sort_option, true) ? default_sort_option : 'none')
 		end
 		
 		def sort_param_options
@@ -92,14 +100,14 @@ module Buscar
 		
 		attr_reader :records
 		
-		protected
+		private
 		
 		# Returns the filter option matching @params[:filter], or else nil
 		def chosen_filter_option
-			if respond_to?(:filter_options)
+			if respond_to?(:filter_options, true)
 				if @params.has_key?(:filter) and @params[:filter] != 'none'
 					filter_options.assoc(@params[:filter].to_s)[1]
-				elsif respond_to?(:default_filter_option)
+				elsif respond_to?(:default_filter_option, true)
 					filter_options.assoc(default_filter_option.to_s)[1]
 				else
 					nil
@@ -111,10 +119,10 @@ module Buscar
 		
 		# Returns the sort option matching @params[:sort], or else nil
 		def chosen_sort_option
-			if respond_to?(:sort_options)
+			if respond_to?(:sort_options, true)
 				if @params.has_key?(:sort) and @params[:sort] != 'none'
 					sort_options.assoc(@params[:sort].to_s)[1]
-				elsif respond_to?(:default_sort_option)
+				elsif respond_to?(:default_sort_option, true)
 					sort_options.assoc(default_sort_option.to_s)[1]
 				else
 					nil
@@ -124,12 +132,8 @@ module Buscar
 			end
 		end
 		
-		def conditions
-			filter = chosen_filter_option
-			filter.is_a?(Proc) ? nil : filter # Anything other than a Proc (including nil) should be passed to :conditions
-		end
-		
-		def order
+		# Override if you want to, or else it tries to use params[:sort]
+		def order_clause
 			sort = chosen_sort_option
 			(sort.is_a?(String) or sort.is_a?(Symbol)) ? sort : nil
 		end
@@ -142,14 +146,22 @@ module Buscar
 			50
 		end
 		
+		# Override if you want to, or else it tries to use params[:filter]
 		def select_proc
 			filter = chosen_filter_option
 			filter.is_a?(Proc) ? filter : nil
 		end
 		
+		# Override if you want to, or else it tries to use params[:sort]
 		def sort_proc
 			sort = chosen_sort_option
 			sort.is_a?(Proc) ? sort : nil
+		end
+		
+		# Override if you want to, or else it tries to use params[:filter]
+		def where_clause
+			filter = chosen_filter_option
+			filter.is_a?(Proc) ? nil : filter # Anything other than a Proc (including nil) should be passed to :conditions
 		end
 	end
 end

@@ -1,6 +1,8 @@
 require 'spec_helper'
 require 'active_support'
-require 'action_view/helpers'
+require 'action_view'
+require 'action_view/base' # For the NonConcattingString class
+require 'action_view/template/handlers/erb' # For the OutputBuffer class
 require 'webrat'
 
 describe Buscar::Helpers do
