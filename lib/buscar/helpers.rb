@@ -6,7 +6,7 @@ module Buscar
 				index.filter_param_options.each do |param|
 					choices << content_tag('li') do
 						if index.filter_param.to_s == param.to_s
-							'<span class="selected">' + param.to_s.humanize + '</span>'
+							('<span class="selected">' + h(param.to_s.humanize) + '</span>').html_safe
 						else
 							link_to param.to_s.humanize, yield(param)
 						end
@@ -32,7 +32,7 @@ module Buscar
 					max_page = current_page + 2
 					max_page = total_pages if max_page > total_pages
 					if current_page > 1
-						lis << content_tag('li', link_to('&laquo; Back', yield(current_page - 1)))
+						lis << content_tag('li', link_to('&laquo; Back'.html_safe, yield(current_page - 1)))
 					end
 					if min_page > 1
 						lis << content_tag('li', link_to('1', yield(1)))
@@ -57,7 +57,7 @@ module Buscar
 					
 					end
 					if current_page < total_pages
-						lis << content_tag('li', link_to('Next &raquo;', yield(current_page + 1)))
+						lis << content_tag('li', link_to('Next &raquo;'.html_safe, yield(current_page + 1)))
 					end
 					lis.html_safe
 				end.html_safe
@@ -72,7 +72,7 @@ module Buscar
 				index.sort_param_options.each do |param|
 					choices << content_tag('li') do
 						if index.sort_param.to_s == param.to_s
-							'<span class="selected">' + param.to_s.humanize + '</span>'
+							('<span class="selected">' + h(param.to_s.humanize) + '</span>').html_safe
 						else
 							link_to param.to_s.humanize, yield(param)
 						end
