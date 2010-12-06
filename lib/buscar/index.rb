@@ -124,11 +124,27 @@ module Buscar
 			end
 		end
 		
+		# Look at chosen_filter_option. If it returns something that can be passed to #where, return that. Otherwise, return nil.
+		#
+		# If you override this, you may want to call #super to incorporate this functionality. It must return either nil,
+		# something to be passed into #where, or an array of things to be passed into chained #where calls. Example subclass method:
+		#
+		#  class UserIndex < Buscar::Index
+		#
+		#    def conditions
+		#      [super, {:hide_profile => false}]
+		#    end
+		#
+		#    # other required methods here
+		#  end
+		# This would cause the index to filter according to params[:filter], and also filter out anyone whose profile is hidden.
 		def conditions
 			filter = chosen_filter_option
-			filter.is_a?(Proc) ? nil : filter # Anything other than a Proc (including nil) should be passed to :conditions
+			filter.is_a?(Proc) ? nil : filter # Anything other than a Proc (including nil) should be passed to #where
 		end
 		
+		# Look at chosen_sort_option. If it returns something that can be passed to #order, return that. Otherwise, return nil.
+		# For overriding, see the comment for #conditions.
 		def order
 			sort = chosen_sort_option
 			(sort.is_a?(String) or sort.is_a?(Symbol)) ? sort : nil
