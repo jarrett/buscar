@@ -1,4 +1,4 @@
-Buscar::Helpers
+require 'spec_helper'
 require 'test_db'
 require 'blueprint'
 require 'matchers'
@@ -41,7 +41,7 @@ describe Buscar::Index do
 			}.each do |page, tags|
 				index = SimpleTagIndex.new(:page => page)
 				index.stub(:records_per_page => 2)
-				index.stub(:order => :name)
+				index.stub(:order_clause => :name)
 				index.generate!
 				index.to_a.should == tags
 			end
@@ -116,7 +116,7 @@ describe Buscar::Index do
 			index.should_not include_tag('Pizza')
 		end
 		
-		it 'filters by conditions' do
+		it 'filters by where_clause' do
 			ethio = Business.make(:city => @chicago)
 			pizza = Business.make(:city => @chicago)
 			
@@ -141,7 +141,7 @@ describe Buscar::Index do
 			index.should sort_tags('Thai', 'Ethiopian', 'Pizza')
 		end
 		
-		it 'sorts by order' do
+		it 'sorts by order_clause' do
 			tag_business(Business.make(:city => @chicago), 'Pizza')
 			tag_business(Business.make(:city => @chicago), 'Ethiopian')
 			tag_business(Business.make(:city => @chicago), 'Vegetarian')
@@ -150,11 +150,6 @@ describe Buscar::Index do
 			index = TagIndex.generate(@chicago, :sort => 'name')
 			
 			index.should sort_tags('Ethiopian', 'Pizza', 'Raw', 'Vegetarian')
-		end
-		
-		it 'uses include for eager loading' do
-			Tag.should_receive(:find).with(:all, hash_including(:include => :businesses)).and_return([])
-			TagIndex.generate(@chicago)
 		end
 		
 		it 'filters with a proc according to filter_options and params[:filter]' do
@@ -269,7 +264,7 @@ describe Buscar::Index do
 			
 			index = SimpleTagIndex.new
 			index.stub(:records_per_page => 2)
-			index.stub(:order => :name)
+			index.stub(:order_clause => :name)
 			index.generate!
 				
 			index.records_on_page(0).should == [@burgers, @ethiopian]
@@ -318,7 +313,7 @@ describe Buscar::Index do
 end
 
 class TagIndex < Buscar::Index
-	def conditions
+	def where_clause
 		@params.has_key?(:name) ? {:name => @params[:name]} : nil
 	end
 	
@@ -327,7 +322,7 @@ class TagIndex < Buscar::Index
 		@params = params
 	end
 	
-	def include
+	def includes_clause
 		:businesses
 	end
 	
@@ -335,7 +330,7 @@ class TagIndex < Buscar::Index
 		Tag
 	end
 	
-	def order
+	def order_clause
 		@params[:sort].to_s == 'name' ? :name : nil
 	end
 	
@@ -371,18 +366,18 @@ class AutoSwitchingTagIndex < Buscar::Index
 	
 	# Must return a hash. Keys correspond to possible values of params[:sort].
 	# Values can be a string, a symbol, or a Proc. If a Proc, it will be passed to #sort_by.
-	# If a string or symbol, it will be passed to #find as the :order option.
+	# If a string or symbol, it will be passed to #order
 	def sort_options
 		[
-			['name', 'name'], # Will be passed to :conditions
+			['name', 'name'], # Will be passed to #order
 			['businesses', lambda { |tag| -1 * tag.businesses.length }]
 		]
 	end
 	
 	# Must return a hash. Keys correspond to possible values of params[:filter].
-	# Values can be a Proc or anything accepted by ActiveRecord's :conditions clause.
-	# If a Proc, it will be passed to #select. Otherwise, it will be passed to #find as
-	# the :conditions option.
+	# Values can be a Proc or anything accepted by ActiveRecord's #where clause.
+	# If a Proc, it will be passed to #select (the Enumerable method, not the Relation method.)
+	# Otherwise, it will be passed to #where.
 	def filter_options
 		[
 			# Silly, but illustrates the functionality
