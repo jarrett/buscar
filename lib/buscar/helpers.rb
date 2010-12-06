@@ -13,7 +13,7 @@ module Buscar
 					end
 				end
 				choices
-			end
+			end.html__safe
 		end
 		
 		# Accepts an instance of Buscar::Index, which will tell it the total number of pages, the current page, and the number of records per page.
@@ -60,7 +60,7 @@ module Buscar
 						lis << content_tag('li', link_to('Next &raquo;', yield(current_page + 1)))
 					end
 					lis
-				end
+				end.html_safe
 			else
 				nil
 			end
@@ -79,7 +79,7 @@ module Buscar
 					end
 				end
 				choices
-			end
+			end.html_safe
 		end
 	end
 end
