@@ -26,6 +26,7 @@ Gem::Specification.new do |s|
     "lib/buscar.rb",
     "lib/buscar/helpers.rb",
     "lib/buscar/index.rb",
+    "rails/init.rb",
     "spec/.rspec",
     "spec/blueprint.rb",
     "spec/helpers_spec.rb",
