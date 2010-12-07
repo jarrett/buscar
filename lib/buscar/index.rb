@@ -14,12 +14,20 @@ module Buscar
 			@records.empty?
 		end
 		
+		# Returns one of the following in descending order of preference:
+		# - params[:filter]
+		# - default_filter_option
+		# - 'none'
 		def filter_param
 			@params[:filter] || (respond_to?(:default_filter_option, true) ? default_filter_option : 'none')
 		end
 		
 		def filter_param_options
-			filter_options.collect(&:first)
+			filter_options.collect do |opt|
+				arr = [opt[0]]
+				arr << opt[2] if opt.length == 3
+				arr
+			end
 		end
 		
 		def self.generate(*args)
@@ -37,16 +45,26 @@ module Buscar
 			raise "Buscar::Index#order is deprecated. Name your method order_clause instead." if respond_to?(:order, true)
 			raise "Buscar::Index#include_clause is deprecated. Name your method includes_clause instead." if respond_to?(:include, true)
 			
-			 # Take advantage of the lazy loading introduced in ActiveRecord 3
 			@records = finder.scoped # Get the bare relation object in case none of the modifiers are used
-			%w(where having select group order limit offset joins includes lock readonly from).each do |meth|
+			# Use each AR query modifier other than #where and #order if applicable
+			%w(having select group limit offset joins includes lock readonly from).each do |meth|
 				@records = @records.send(meth, send("#{meth}_clause".to_sym)) if respond_to?("#{meth}_clause".to_sym, true)
 			end
-			if select_proc
-				@records = @records.select(&select_proc)
+			
+			chained_filters = filter
+			chained_filters = chain(chained_filters) unless chained_filters.is_a?(Chain) # filter might return a Chain or a single filtering rule. If it's a single one, we'll put it in an array.
+			@filter_procs = chained_filters.select { |f| f.is_a?(Proc) } # Procs will be triggered by the first call to #records so as not to defeat lazy loading
+			where_filters = chained_filters.select { |f| !f.is_a?(Proc) } # SQL filters can be used right away
+			where_filters.each do |filt|
+				@records = @records.where(filt)
 			end
-			if sort_proc
-				@records = @records.sort_by(&sort_proc)
+			
+			sort_rule = sort
+			# If sorting by a proc, do it on the first call to #records so as not to defeat lazy loading 
+			if sort_rule.is_a?(Proc)
+				@sort_proc = sort_rule
+			else
+				@records = @records.order(sort_rule)
 			end
 		end
 		
@@ -90,53 +108,48 @@ module Buscar
 			end
 		end
 		
+		# Returns one of the following in descending order of preference:
+		# - params[:sort]
+		# - default_sort_option
+		# - 'none'
 		def sort_param
 			@params[:sort] || (respond_to?(:default_sort_option, true) ? default_sort_option : 'none')
 		end
 		
 		def sort_param_options
-			sort_options.collect(&:first)
+			sort_options.collect do |opt|
+				arr = [opt[0]]
+				arr << opt[2] if opt.length == 3
+				arr
+			end
 		end
 		
-		attr_reader :records
+		def records
+			unless @procs_called
+				@filter_procs.each do |proc|
+					@records = @records.select(&proc)
+				end
+				@records = @records.sort_by(&@sort_proc) if @sort_proc
+				@procs_called = true
+			end
+			@records
+		end
 		
 		private
 		
-		# Returns the filter option matching @params[:filter], or else nil
-		def chosen_filter_option
-			if respond_to?(:filter_options, true)
-				if @params.has_key?(:filter) and @params[:filter] != 'none'
-					filter_options.assoc(@params[:filter].to_s)[1]
-				elsif respond_to?(:default_filter_option, true)
-					filter_options.assoc(default_filter_option.to_s)[1]
-				else
-					nil
-				end
+		class Chain < Array; end
+		
+		def chain(*elements)
+			Chain.new(elements)
+		end
+		
+		# Return something for #where, a Proc, or an array
+		def filter
+			if respond_to?(:filter_options, true) and (option = filter_options.assoc(filter_param))
+				option[1]
 			else
 				nil
 			end
-		end
-		
-		# Returns the sort option matching @params[:sort], or else nil
-		def chosen_sort_option
-			if respond_to?(:sort_options, true)
-				if @params.has_key?(:sort) and @params[:sort] != 'none'
-					sort_options.assoc(@params[:sort].to_s)[1]
-				elsif respond_to?(:default_sort_option, true)
-					sort_options.assoc(default_sort_option.to_s)[1]
-				else
-					nil
-				end
-			else
-				nil
-			end
-		end
-		
-		# Look at chosen_sort_option. If it returns something that can be passed to #order, return that. Otherwise, return nil.
-		# For overriding, see the comment for #conditions.
-		def order_clause
-			sort = chosen_sort_option
-			(sort.is_a?(String) or sort.is_a?(Symbol)) ? sort : nil
 		end
 		
 		def paginate?
@@ -145,6 +158,14 @@ module Buscar
 		
 		def records_per_page
 			@params[:records_per_page] || 50
+		end
+		
+		def sort
+			if respond_to?(:sort_options, true) and (option = sort_options.assoc(sort_param))
+				option[1]
+			else
+				nil
+			end
 		end
 	end
 end

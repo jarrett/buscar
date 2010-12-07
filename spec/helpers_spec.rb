@@ -16,26 +16,49 @@ describe Buscar::Helpers do
 	
 	describe '#filter_menu' do
 		before :each do
-			@index = mock(:filter_param_options => ['breakfast', 'lunch', 'dinner'], :filter_param => 'lunch')
+			@index = mock(:filter_param_options => [['breakfast', 'Breakfast Time'], ['lunch'], ['dinner']], :filter_param => 'lunch')
 		end
 		
-		it 'yields each possible filter param except the selected one' do
+		it 'yields each possible filter param' do
 			yielded = []
 			filter_menu(@index) do |filter_param|
 				yielded << filter_param
 				''
 			end
-			yielded.should == ['breakfast', 'dinner']
+			yielded.should == ['breakfast', 'lunch', 'dinner']
 		end
 		
-		it 'prints a link for each unselected option, using the URL returned by the block and the humanized param as the text' do
+		it 'prints a link for each option, using the URL returned by the block and the humanized param or the overridden label as the text' do
 			html = filter_menu(@index) do |filter_param|
-				"http://test.host/none/#{filter_param}"
+				"http://test.host/#{filter_param}"
 			end
-			html.should     include('<a href="http://test.host/none/breakfast">Breakfast</a>')
-			html.should_not include('<a href="http://test.host/none/lunch">Lunch</a>')
-			html.should     include('<a href="http://test.host/none/dinner">Dinner</a>')
-			html.should     include('<span class="selected">Lunch</span>')
+			html.should include('<a href="http://test.host/breakfast">Breakfast Time</a>')
+			html.should include('<a href="http://test.host/lunch">Lunch</a>')
+			html.should include('<a href="http://test.host/dinner">Dinner</a>')
+		end
+	end
+	
+	describe '#sort_menu' do
+		before :each do
+			@index = mock(:sort_param_options => [['name'], ['dishes', 'Number of Dishes'], ['reviews']], :sort_param => 'dishes')
+		end
+		
+		it 'yields each possible sort param' do
+			yielded = []
+			sort_menu(@index) do |sort_param|
+				yielded << sort_param
+				''
+			end
+			yielded.should == ['name', 'dishes', 'reviews']
+		end
+		
+		it 'prints a link for each option, using the URL returned by the block and the humanized param or the overridden label as the text' do
+			html = sort_menu(@index) do |sort_param, filter_param|
+				"http://test.host/#{sort_param}"
+			end
+			html.should include('<a href="http://test.host/name">Name</a>')
+			html.should include('<a href="http://test.host/dishes">Number of Dishes</a>')
+			html.should include('<a href="http://test.host/reviews">Reviews</a>')
 		end
 	end
 	
@@ -55,30 +78,5 @@ describe Buscar::Helpers do
 				end
 			end
 		end
-	end
-	
-	describe '#sort_menu' do
-		before :each do
-			@index = mock(:sort_param_options => ['name', 'dishes', 'reviews'], :sort_param => 'dishes')
-		end
-		
-		it 'yields each possible sort param except the selected one' do
-			yielded = []
-			sort_menu(@index) do |sort_param|
-				yielded << sort_param
-				''
-			end
-			yielded.should == ['name', 'reviews']
-		end
-		
-		it 'prints a link for each unselected option, using the URL returned by the block and the humanized param as the text' do
-			html = sort_menu(@index) do |sort_param, filter_param|
-				"http://test.host/#{sort_param}/none"
-			end
-			html.should     include('<a href="http://test.host/name/none">Name</a>')
-			html.should_not include('<a href="http://test.host/dishes/none">Dishes</a>')
-			html.should     include('<a href="http://test.host/reviews/none">Reviews</a>')
-			html.should     include('<span class="selected">Dishes</span>')
-		end
-	end
+	end	
 end

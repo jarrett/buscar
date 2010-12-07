@@ -50,16 +50,17 @@ module Buscar
 			end
 		end
 		
-		def filter_menu(index, options = {})
+		def buscar_index_menu(index, type, options)
 			options.reverse_merge! :link_to_current => true
-			content_tag('ul', :class => 'filter_menu') do
+			content_tag('ul', :class => "#{type}_menu") do
 				choices = ''
-				index.filter_param_options.each do |param|
+				index.send("#{type}_param_options").each do |param, label_str|
 					choices << content_tag('li') do
+						label_str = param.to_s.humanize if label_str.nil?
 						if !options[:link_to_current] and index.filter_param.to_s == param.to_s
-							('<span class="selected">' + h(param.to_s.humanize) + '</span>').html_safe
+							('<span class="selected">' + label_str + '</span>').html_safe
 						else
-							link_to param.to_s.humanize, yield(param)
+							link_to label_str, yield(param)
 						end
 					end
 				end
@@ -67,21 +68,12 @@ module Buscar
 			end.html_safe
 		end
 		
-		def sort_menu(index, options = {})
-			options.reverse_merge! :link_to_current => true
-			 content_tag('ul', :class => 'sort_menu') do
-				choices = ''
-				index.sort_param_options.each do |param|
-					choices << content_tag('li') do
-						if !options[:link_to_current] and index.sort_param.to_s == param.to_s
-							('<span class="selected">' + h(param.to_s.humanize) + '</span>').html_safe
-						else
-							link_to param.to_s.humanize, yield(param)
-						end
-					end
-				end
-				choices.html_safe
-			end.html_safe
+		def filter_menu(index, options = {}, &block)
+			buscar_index_menu(index, 'filter', options, &block)
+		end
+		
+		def sort_menu(index, options = {}, &block)
+			buscar_index_menu(index, 'sort', options, &block)
 		end
 	end
 end
