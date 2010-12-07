@@ -1,22 +1,5 @@
 module Buscar
 	module Helpers
-		def filter_menu(index, options = {})
-			options.reverse_merge! :link_to_current => true
-			content_tag('ul', :class => 'filter_menu') do
-				choices = ''
-				index.filter_param_options.each do |param|
-					choices << content_tag('li') do
-						if !options[:link_to_current] and index.filter_param.to_s == param.to_s
-							('<span class="selected">' + h(param.to_s.humanize) + '</span>').html_safe
-						else
-							link_to param.to_s.humanize, yield(param)
-						end
-					end
-				end
-				choices.html_safe
-			end.html_safe
-		end
-		
 		# Accepts an instance of Buscar::Index, which will tell it the total number of pages, the current page, and the number of records per page.
 		# Accepts a block, which is yielded each page number and must return a URL to that page.
 		def page_links(index)
@@ -65,6 +48,23 @@ module Buscar
 			else
 				nil
 			end
+		end
+		
+		def filter_menu(index, options = {})
+			options.reverse_merge! :link_to_current => true
+			content_tag('ul', :class => 'filter_menu') do
+				choices = ''
+				index.filter_param_options.each do |param|
+					choices << content_tag('li') do
+						if !options[:link_to_current] and index.filter_param.to_s == param.to_s
+							('<span class="selected">' + h(param.to_s.humanize) + '</span>').html_safe
+						else
+							link_to param.to_s.humanize, yield(param)
+						end
+					end
+				end
+				choices.html_safe
+			end.html_safe
 		end
 		
 		def sort_menu(index, options = {})

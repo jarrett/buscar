@@ -3,6 +3,111 @@ require 'test_db'
 require 'blueprint'
 require 'matchers'
 
+class TagIndex < Buscar::Index
+	# You can give this any arity you want, but you must at some point initialize @params as a hash.
+	# The superclass implementation takes one argument: the params hash.
+	def initialize(city, params = {})
+		@city = city
+		@params = params
+	end
+	
+	def finder
+		Tag
+	end
+	
+	# Must return a hash. Keys correspond to possible values of params[:sort].
+	# Values can be a string, a symbol, or a Proc. If a Proc, it will be passed to #sort_by.
+	# If a string or symbol, it will be passed to #order
+	def sort_options
+		[
+			['name', 'name'], # Will be passed to #order
+			['businesses', lambda { |tag| -1 * tag.active_businesses_in_city(@city).length }]
+		]
+	end
+	
+	# Optional to define. If not defined, the default sort order will be 'none',
+	# which will probably mean that the records will be returned in order of creation.
+	# (Unless some default ordering has been previously defined for the object returned by #finder.)
+	# The string 'none' will in fact be passed to the #sort_menu helper and will appear in URLs
+	# (assuming you use the helper).
+	def default_sort_order
+		'name'
+	end
+	
+	# Must return a hash. Keys correspond to possible values of params[:filter].
+	# Values can be a Proc or anything accepted by ActiveRecord's #where clause.
+	# If a Proc, it will be passed to #select (the Enumerable method, not the Relation method.)
+	# Otherwise, it will be passed to #where.
+	def filter_options
+		[
+			# Silly, but illustrates the functionality
+			['short_name', 'LENGTH(name) < 5'],
+			['long_name', lambda { |tag| tag.name.length > 6 }]
+		]
+	end
+	
+	# Optional to define. If not defined, the default filter option will be 'none', which will, of course,
+	# mean no filtering. The string 'none' will in fact be passed to the #filter_menu helper and will appear in URLs
+	# (assuming you use the helper).
+	def default_filter_option
+		'short_name'
+	end
+	
+	# Must return one of the following:
+	# - Something that can be passed to #order.
+	# - A proc for #select.
+	# - An array where each element is one of the above. This will cause the filters to be chained, effectively ANDing them.
+	#
+	# If you're using automatic filter switching, you can implement this method to add
+	# on some filtering that will always be applied, regardless of which option is selected.
+	# To do that, return an array where one element is #super.
+	# The implementation below illustrates just that:
+	def filter
+		[
+			super, # Use automatic filter switching, i.e. use params[:filter] and #filter_options
+			{:published => true}, # Only find published tags
+			lambda { |tag| !tag.active_businesses_in_city(@city).empty? } # Only find tags with at least one published business
+		]
+	end
+
+	# This could, if necessary, look at @params and intelligently decide what relationships to include.
+	# In this case, though, we just return the same thing no matter what.
+	def includes_clause
+		:businesses
+	end
+	
+	# This method is already defined in the superclass. By default, it looks at params[:records_per_page].
+	# If that is undefined, it returns 50. One reason to override the method would be to return a different number
+	# when params[:records_per_page] is undefined, as illustrated below. Or, you could make the method
+	# ignore params[:records_per_page], thus preventing the user from choosing a value.
+	def records_per_page
+		@params[:records_per_page] || 25
+	end
+end
+
+# This class implements #sort, and therefore does NOT use #sort_options
+class TagIndexWithUnswitchableSorting < TagIndex
+	# Must return one of the following:
+	# - A string or symbol for #order
+	# - A proc for #sort_by
+	#
+	# Unlike #filter, defining this method is NOT compatible with auto-switching.
+	# This is because you cannot chain sorting--there can only be zero or one sort
+	# orders in use for a given result set. So, only define this method if you
+	# don't intend to use auto-switching for sorting. In this example, we always
+	# sort the same way, but you could implement something dynamic.
+	def sort
+		'name'
+	end
+end
+
+# This class demonstrates the bare minimum implementation of an Index subclass
+class SimpleTagIndex < Buscar::Index
+	def finder
+		Tag
+	end
+end
+
 describe Buscar::Index do
 	include Buscar::IndexMatchers
 	
@@ -88,10 +193,10 @@ describe Buscar::Index do
 	
 	describe '#filter_param_options' do
 		it 'returns an array of all the possible filter_options' do
-			AutoSwitchingTagIndex.new.filter_param_options.should == ['short_name', 'long_name']
+			TagIndex.new.filter_param_options.should == ['short_name', 'long_name']
 		end
 		
-		it 'raises if sort_options is not defined' do
+		it 'raises if filter_options is not defined' do
 			lambda { SimpleTagIndex.new.filter_param_options }.should raise_error
 		end
 	end
@@ -101,119 +206,7 @@ describe Buscar::Index do
 			TagIndex.generate(@chicago).should be_an(Buscar::Index)
 		end
 		
-		it 'filters by select_proc' do
-			chi_ethio = Business.make(:city => @chicago, :name => 'Ras Dashen')
-			chi_pizza = Business.make(:city => @chicago, :active => false, :name => 'Medici')
-			dc_pizza  = Business.make(:city => @dc, :name => "Alberto's")
-			
-			tag_business(chi_ethio, 'Ethiopian')
-			tag_business(chi_pizza, 'Pizza')
-			tag_business(dc_pizza,  'Pizza')
-			
-			index = TagIndex.generate(@chicago)
-			
-			index.should     include_tag('Ethiopian')
-			index.should_not include_tag('Pizza')
-		end
-		
-		it 'filters by where_clause' do
-			ethio = Business.make(:city => @chicago)
-			pizza = Business.make(:city => @chicago)
-			
-			tag_business(ethio, 'Ethiopian')
-			tag_business(pizza, 'Pizza')
-			
-			index = TagIndex.generate(@chicago, :name => 'Ethiopian')
-			
-			index.should     include_tag('Ethiopian')
-			index.should_not include_tag('Pizza')
-		end
-		
-		it 'sorts by sort_proc' do
-			# 1 Pizza place, 2 Ethiopian places, 3 Thai places
-			tag_business(Business.make(:city => @chicago), 'Pizza')
-			2.times { tag_business(Business.make(:city => @chicago), 'Ethiopian') }
-			3.times { tag_business(Business.make(:city => @chicago), 'Thai') }
-			
-			index = TagIndex.generate(@chicago, :sort => 'businesses')
-			
-			# Descending order by number of businesses
-			index.should sort_tags('Thai', 'Ethiopian', 'Pizza')
-		end
-		
-		it 'sorts by order_clause' do
-			tag_business(Business.make(:city => @chicago), 'Pizza')
-			tag_business(Business.make(:city => @chicago), 'Ethiopian')
-			tag_business(Business.make(:city => @chicago), 'Vegetarian')
-			tag_business(Business.make(:city => @chicago), 'Raw')
-			
-			index = TagIndex.generate(@chicago, :sort => 'name')
-			
-			index.should sort_tags('Ethiopian', 'Pizza', 'Raw', 'Vegetarian')
-		end
-		
-		it 'filters with a proc according to filter_options and params[:filter]' do
-			ethiopian = Tag.make(:name => 'Ethiopian')
-			raw = Tag.make(:name => 'Raw')
-			
-			index = AutoSwitchingTagIndex.generate(:filter => 'long_name')
-			
-			index.records.should == [ethiopian]
-		end
-		
-		it 'filters with an AR conditionaccording to filter_options and params[:filter]' do
-			ethiopian = Tag.make(:name => 'Ethiopian')
-			raw = Tag.make(:name => 'Raw')
-			
-			index = AutoSwitchingTagIndex.generate(:filter => 'short_name')
-			
-			index.records.should == [raw]
-		end
-		
-		it 'sorts with a proc according to sort_options and params[:sort]' do
-			# 1 Pizza place, 2 Ethiopian places, 3 Thai places
-			tag_business(Business.make, 'Pizza')
-			2.times { tag_business(Business.make, 'Ethiopian') }
-			3.times { tag_business(Business.make, 'Thai') }
-			
-			index = AutoSwitchingTagIndex.generate(:sort => 'businesses')
-			
-			# Descending order by number of businesses
-			index.should sort_tags('Thai', 'Ethiopian', 'Pizza')
-		end
-		
-		it 'sorts with an AR order according to sort_options and params[:sort]' do
-			pizza = Tag.make(:name => 'Pizza')
-			raw = Tag.make(:name => 'Raw')
-			ethiopian = Tag.make(:name => 'Ethiopian')
-			
-			index = AutoSwitchingTagIndex.generate(:sort => 'name')
-			
-			index.should sort_tags('Ethiopian', 'Pizza', 'Raw')
-		end
-		
-		it 'uses default_sort_option' do
-			pizza = Tag.make(:name => 'Pizza')
-			raw = Tag.make(:name => 'Raw')
-			ethiopian = Tag.make(:name => 'Ethiopian')
-			
-			index = AutoSwitchingTagIndex.new
-			index.stub(:default_sort_option => :name)
-			index.generate!
-			
-			index.should sort_tags('Ethiopian', 'Pizza', 'Raw')
-		end
-		
-		it 'uses default_filter_option' do
-			ethiopian = Tag.make(:name => 'Ethiopian')
-			raw = Tag.make(:name => 'Raw')
-			
-			index = AutoSwitchingTagIndex.new
-			index.stub(:default_filter_option => :short_name)
-			index.generate!
-			
-			index.records.should == [raw]
-		end
+		it 'uses #sort when #sort provides only a string'
 		
 		it 'does not require subclasses to define anything other than #finder' do
 			SimpleTagIndex.generate
@@ -303,87 +296,12 @@ describe Buscar::Index do
 	
 	describe '#sort_param_options' do
 		it 'returns an array of all the possible sort_options' do
-			AutoSwitchingTagIndex.new.sort_param_options.should == ['name', 'businesses']
+			TagIndex.new.sort_param_options.should == ['name', 'businesses']
 		end
 		
 		it 'raises if sort_options is not defined' do
 			lambda { SimpleTagIndex.new.sort_param_options }.should raise_error
 		end
-	end
-end
-
-class TagIndex < Buscar::Index
-	def where_clause
-		@params.has_key?(:name) ? {:name => @params[:name]} : nil
-	end
-	
-	def initialize(city, params = {})
-		@city = city
-		@params = params
-	end
-	
-	def includes_clause
-		:businesses
-	end
-	
-	def finder
-		Tag
-	end
-	
-	def order_clause
-		@params[:sort].to_s == 'name' ? :name : nil
-	end
-	
-	def records_per_page
-		@params[:records_per_page] || 50
-	end
-	
-	def select_proc
-		lambda do |tag|
-			!tag.active_businesses_in_city(@city).empty?
-		end
-	end
-	
-	def sort_proc
-		if @params[:sort].to_s == 'businesses'
-			lambda { |tag| -1 * tag.active_businesses_in_city(@city).length }
-		else
-			nil
-		end
-	end
-end
-
-class SimpleTagIndex < Buscar::Index
-	def finder
-		Tag
-	end
-end
-
-class AutoSwitchingTagIndex < Buscar::Index
-	def finder
-		Tag
-	end
-	
-	# Must return a hash. Keys correspond to possible values of params[:sort].
-	# Values can be a string, a symbol, or a Proc. If a Proc, it will be passed to #sort_by.
-	# If a string or symbol, it will be passed to #order
-	def sort_options
-		[
-			['name', 'name'], # Will be passed to #order
-			['businesses', lambda { |tag| -1 * tag.businesses.length }]
-		]
-	end
-	
-	# Must return a hash. Keys correspond to possible values of params[:filter].
-	# Values can be a Proc or anything accepted by ActiveRecord's #where clause.
-	# If a Proc, it will be passed to #select (the Enumerable method, not the Relation method.)
-	# Otherwise, it will be passed to #where.
-	def filter_options
-		[
-			# Silly, but illustrates the functionality
-			['short_name', 'LENGTH(name) < 5'],
-			['long_name', lambda { |tag| tag.name.length > 6 }]
-		]
 	end
 end
 

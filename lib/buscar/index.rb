@@ -132,11 +132,6 @@ module Buscar
 			end
 		end
 		
-		def conditions
-			filter = chosen_filter_option
-			filter.is_a?(Proc) ? nil : filter # Anything other than a Proc (including nil) should be passed to #where
-		end
-		
 		# Look at chosen_sort_option. If it returns something that can be passed to #order, return that. Otherwise, return nil.
 		# For overriding, see the comment for #conditions.
 		def order_clause
@@ -149,38 +144,7 @@ module Buscar
 		end
 		
 		def records_per_page
-			50
-		end
-		
-		# Override if you want to, or else it tries to use params[:filter]
-		def select_proc
-			filter = chosen_filter_option
-			filter.is_a?(Proc) ? filter : nil
-		end
-		
-		# Override if you want to, or else it tries to use params[:sort]
-		def sort_proc
-			sort = chosen_sort_option
-			sort.is_a?(Proc) ? sort : nil
-		end
-		
-		# Look at chosen_filter_option. If it returns something that can be passed to #where, return that. Otherwise, return nil.
-		#
-		# If you override this, you may want to call #super to incorporate this functionality. It must return either nil,
-		# something to be passed into #where, or an array of things to be passed into chained #where calls. Example subclass method:
-		#
-		#  class UserIndex < Buscar::Index
-		#
-		#    def conditions
-		#      [super, {:hide_profile => false}]
-		#    end
-		#
-		#    # other required methods here
-		#  end
-		# This would cause the index to filter according to params[:filter], and also filter out anyone whose profile is hidden.
-		def where_clause
-			filter = chosen_filter_option
-			filter.is_a?(Proc) ? nil : filter # Anything other than a Proc (including nil) should be passed to :conditions
+			@params[:records_per_page] || 50
 		end
 	end
 end

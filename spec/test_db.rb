@@ -19,6 +19,7 @@ ActiveRecord::Schema.define do
 	
 	create_table :tags, :force => true do |t|
 		t.string :name, :null => false
+		t.boolean :published, :null => false, :default => false
 	end
 	
 	create_table :taggings, :force => true do |t|

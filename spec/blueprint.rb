@@ -20,6 +20,7 @@ end
 
 Tag.blueprint do
 	name { Sham.tag }
+	published true
 end
 
 Tagging.blueprint do
