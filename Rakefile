@@ -29,6 +29,7 @@ Jeweler::Tasks.new do |gem|
 	gem.add_development_dependency "faker", ">= 0.3.1"
 	gem.add_development_dependency "webrat", ">= 0.7.2"
 	# gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settingsend
+end
 Jeweler::RubygemsDotOrgTasks.new
 
 require 'rake/testtask'
