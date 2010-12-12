@@ -5,21 +5,24 @@
 
 Gem::Specification.new do |s|
   s.name = %q{buscar}
-  s.version = "0.1.3"
+  s.version = "1.0.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["jarrett"]
-  s.date = %q{2010-12-06}
+  s.date = %q{2010-12-07}
   s.description = %q{Simplifies searching, sorting, and pagination of ActiveRecord models. Includes a model class and a view helper.}
   s.email = %q{jarrettcolby@gmail.com}
   s.extra_rdoc_files = [
     "LICENSE",
-    "README.rdoc"
+    "README.markdown"
   ]
   s.files = [
     ".document",
+    ".rvmrc",
+    "Gemfile",
+    "Gemfile.lock",
     "LICENSE",
-    "README.rdoc",
+    "README.markdown",
     "Rakefile",
     "VERSION",
     "buscar.gemspec",
@@ -27,7 +30,6 @@ Gem::Specification.new do |s|
     "lib/buscar/helpers.rb",
     "lib/buscar/index.rb",
     "lib/buscar/railtie.rb",
-    "spec/.rspec",
     "spec/blueprint.rb",
     "spec/helpers_spec.rb",
     "spec/index_spec.rb",
@@ -40,13 +42,12 @@ Gem::Specification.new do |s|
   s.rubygems_version = %q{1.3.7}
   s.summary = %q{Searching, sorting, and pagination for Rails}
   s.test_files = [
-     "spec/blueprint.rb",
-     "spec/buscar_spec.rb",
-     "spec/helpers_spec.rb",
-     "spec/index_spec.rb",
-     "spec/matchers.rb",
-     "spec/spec_helper.rb",
-     "spec/test_db.rb"
+    "spec/blueprint.rb",
+    "spec/helpers_spec.rb",
+    "spec/index_spec.rb",
+    "spec/matchers.rb",
+    "spec/spec_helper.rb",
+    "spec/test_db.rb"
   ]
 
   if s.respond_to? :specification_version then
@@ -54,12 +55,60 @@ Gem::Specification.new do |s|
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
-      s.add_development_dependency(%q<rspec>, [">= 1.2.9"])
+      s.add_development_dependency(%q<bundler>, ["~> 1.0.0"])
+      s.add_development_dependency(%q<jeweler>, ["~> 1.5.1"])
+      s.add_development_dependency(%q<rspec>, [">= 2.2.0"])
+      s.add_development_dependency(%q<rcov>, [">= 0"])
+      s.add_development_dependency(%q<machinist>, [">= 1.0.6"])
+      s.add_development_dependency(%q<faker>, [">= 0.3.1"])
+      s.add_development_dependency(%q<activesupport>, [">= 3.0.3"])
+      s.add_development_dependency(%q<actionpack>, [">= 3.0.3"])
+      s.add_development_dependency(%q<activerecord>, [">= 3.0.3"])
+      s.add_runtime_dependency(%q<activesupport>, [">= 3.0.2"])
+      s.add_runtime_dependency(%q<activerecord>, [">= 3.0.2"])
+      s.add_development_dependency(%q<actionpack>, [">= 3.0.2"])
+      s.add_development_dependency(%q<rspec>, [">= 2.1.0"])
+      s.add_development_dependency(%q<sqlite3-ruby>, [">= 1.2.5"])
+      s.add_development_dependency(%q<machinist>, [">= 1.0.6"])
+      s.add_development_dependency(%q<faker>, [">= 0.3.1"])
+      s.add_development_dependency(%q<webrat>, [">= 0.7.2"])
     else
-      s.add_dependency(%q<rspec>, [">= 1.2.9"])
+      s.add_dependency(%q<bundler>, ["~> 1.0.0"])
+      s.add_dependency(%q<jeweler>, ["~> 1.5.1"])
+      s.add_dependency(%q<rspec>, [">= 2.2.0"])
+      s.add_dependency(%q<rcov>, [">= 0"])
+      s.add_dependency(%q<machinist>, [">= 1.0.6"])
+      s.add_dependency(%q<faker>, [">= 0.3.1"])
+      s.add_dependency(%q<activesupport>, [">= 3.0.3"])
+      s.add_dependency(%q<actionpack>, [">= 3.0.3"])
+      s.add_dependency(%q<activerecord>, [">= 3.0.3"])
+      s.add_dependency(%q<activesupport>, [">= 3.0.2"])
+      s.add_dependency(%q<activerecord>, [">= 3.0.2"])
+      s.add_dependency(%q<actionpack>, [">= 3.0.2"])
+      s.add_dependency(%q<rspec>, [">= 2.1.0"])
+      s.add_dependency(%q<sqlite3-ruby>, [">= 1.2.5"])
+      s.add_dependency(%q<machinist>, [">= 1.0.6"])
+      s.add_dependency(%q<faker>, [">= 0.3.1"])
+      s.add_dependency(%q<webrat>, [">= 0.7.2"])
     end
   else
-    s.add_dependency(%q<rspec>, [">= 1.2.9"])
+    s.add_dependency(%q<bundler>, ["~> 1.0.0"])
+    s.add_dependency(%q<jeweler>, ["~> 1.5.1"])
+    s.add_dependency(%q<rspec>, [">= 2.2.0"])
+    s.add_dependency(%q<rcov>, [">= 0"])
+    s.add_dependency(%q<machinist>, [">= 1.0.6"])
+    s.add_dependency(%q<faker>, [">= 0.3.1"])
+    s.add_dependency(%q<activesupport>, [">= 3.0.3"])
+    s.add_dependency(%q<actionpack>, [">= 3.0.3"])
+    s.add_dependency(%q<activerecord>, [">= 3.0.3"])
+    s.add_dependency(%q<activesupport>, [">= 3.0.2"])
+    s.add_dependency(%q<activerecord>, [">= 3.0.2"])
+    s.add_dependency(%q<actionpack>, [">= 3.0.2"])
+    s.add_dependency(%q<rspec>, [">= 2.1.0"])
+    s.add_dependency(%q<sqlite3-ruby>, [">= 1.2.5"])
+    s.add_dependency(%q<machinist>, [">= 1.0.6"])
+    s.add_dependency(%q<faker>, [">= 0.3.1"])
+    s.add_dependency(%q<webrat>, [">= 0.7.2"])
   end
 end
 
