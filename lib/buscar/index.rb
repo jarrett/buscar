@@ -11,7 +11,7 @@ module Buscar
 		end
 		
 		def empty?
-			@records.empty?
+			records.empty?
 		end
 		
 		# Returns one of the following in descending order of preference:
@@ -73,7 +73,7 @@ module Buscar
 		end
 		
 		def length
-			@records.length
+			records.length
 		end
 		
 		def optional_params(*keys)
@@ -94,7 +94,7 @@ module Buscar
 		end
 		
 		def page_count
-			(@records.length.to_f / records_per_page).ceil
+			(records.length.to_f / records_per_page).ceil
 		end
 		
 		attr_reader :params
@@ -102,9 +102,9 @@ module Buscar
 		# page_num is zero-based for this method.
 		def records_on_page(page_num)
 			if paginate?
-				@records.slice((page_num) * records_per_page, records_per_page)
+				records.slice((page_num) * records_per_page, records_per_page)
 			else
-				@records
+				records
 			end
 		end
 		
