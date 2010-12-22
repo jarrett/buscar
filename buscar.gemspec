@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{buscar}
-  s.version = "1.0.1"
+  s.version = "1.0.2"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["jarrett"]
-  s.date = %q{2010-12-12}
+  s.date = %q{2010-12-22}
   s.description = %q{Simplifies searching, sorting, and pagination of ActiveRecord models. Includes a model class and a view helper.}
   s.email = %q{jarrettcolby@gmail.com}
   s.extra_rdoc_files = [
