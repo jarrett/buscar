@@ -57,10 +57,12 @@ module Buscar
 				index.send("#{type}_param_options").each do |param, label_str|
 					choices << content_tag('li') do
 						label_str = param.to_s.humanize if label_str.nil?
-						if !options[:link_to_current] and index.filter_param.to_s == param.to_s
+						is_selected = index.filter_param.to_s == param.to_s
+						if is_selected and !options[:link_to_current]
 							('<span class="selected">' + label_str + '</span>').html_safe
 						else
-							link_to label_str, yield(param), :class => 'selected'
+							link_options = is_selected ? {:class => 'selected'} : {}
+							link_to label_str, yield(param), link_options
 						end
 					end
 				end
