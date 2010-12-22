@@ -60,7 +60,7 @@ module Buscar
 						if !options[:link_to_current] and index.filter_param.to_s == param.to_s
 							('<span class="selected">' + label_str + '</span>').html_safe
 						else
-							link_to label_str, yield(param)
+							link_to label_str, yield(param), :class => 'selected'
 						end
 					end
 				end
