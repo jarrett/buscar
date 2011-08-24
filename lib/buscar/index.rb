@@ -5,7 +5,8 @@ module Buscar
 		# Views can call this method to iterate over the current page's records. Uses
 		# the value returned by #page, which in turn uses the value of @params[:page]
 		def each
-			records_on_page(page).each do |record|
+			collection = paginate? ? records_on_page(page) : records
+			collection.each do |record|
 				yield record
 			end
 		end
